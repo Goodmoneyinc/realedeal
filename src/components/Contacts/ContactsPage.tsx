@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Mail, Phone, Edit, Trash2, Users as UsersIcon } from 'lucide-react';
+import { Plus, Search, Mail, Phone, Edit, Trash2, Users as UsersIcon, AlertCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { ContactForm } from './ContactForm';
@@ -20,11 +20,15 @@ export function ContactsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [typeFilter, setTypeFilter] = useState<string>('all');
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   useEffect(() => {
-    loadContacts();
-  }, [user]);
+    if (profile?.role === 'agent') {
+      loadContacts();
+    } else {
+      setLoading(false);
+    }
+  }, [user, profile]);
 
   const loadContacts = async () => {
     if (!user) return;
@@ -83,6 +87,26 @@ export function ContactsPage() {
     };
     return colors[type] || 'bg-gray-100 text-gray-800';
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    );
+  }
+
+  if (profile?.role !== 'agent') {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <AlertCircle className="h-16 w-16 text-red-400 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h3>
+          <p className="text-gray-600">This feature is only available to agents.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (showForm) {
     return <ContactForm contact={editingContact} onClose={handleFormClose} />;

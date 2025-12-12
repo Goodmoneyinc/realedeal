@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, DollarSign, MapPin, TrendingUp, Edit, Trash2, Briefcase, Building2 } from 'lucide-react';
+import { Plus, Search, DollarSign, MapPin, TrendingUp, Edit, Trash2, Briefcase, Building2, AlertCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { DealForm } from './DealForm';
@@ -24,11 +24,15 @@ export function DealsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   useEffect(() => {
-    loadDeals();
-  }, [user]);
+    if (profile?.role === 'agent') {
+      loadDeals();
+    } else {
+      setLoading(false);
+    }
+  }, [user, profile]);
 
   const loadDeals = async () => {
     if (!user) return;
@@ -87,6 +91,26 @@ export function DealsPage() {
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">Loading...</div>
+      </div>
+    );
+  }
+
+  if (profile?.role !== 'agent') {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <AlertCircle className="h-16 w-16 text-red-400 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h3>
+          <p className="text-gray-600">This feature is only available to agents.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (showForm) {
     return <DealForm deal={editingDeal} onClose={handleFormClose} />;

@@ -35,7 +35,7 @@ interface TermSheet {
 }
 
 export function LenderReferralsPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [selectedReferral, setSelectedReferral] = useState<Referral | null>(null);
   const [showTermSheetForm, setShowTermSheetForm] = useState(false);
@@ -52,8 +52,12 @@ export function LenderReferralsPage() {
   });
 
   useEffect(() => {
-    loadReferrals();
-  }, [user]);
+    if (profile?.role === 'lender') {
+      loadReferrals();
+    } else {
+      setLoading(false);
+    }
+  }, [user, profile]);
 
   const loadReferrals = async () => {
     if (!user) return;
@@ -147,6 +151,18 @@ export function LenderReferralsPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-gray-500">Loading referrals...</div>
+      </div>
+    );
+  }
+
+  if (profile?.role !== 'lender') {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <AlertCircle className="h-16 w-16 text-red-400 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h3>
+          <p className="text-gray-600">This feature is only available to lenders.</p>
+        </div>
       </div>
     );
   }

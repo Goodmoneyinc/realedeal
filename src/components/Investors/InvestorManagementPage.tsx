@@ -18,7 +18,7 @@ interface Assignment {
 }
 
 export function InvestorManagementPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [availableInvestors, setAvailableInvestors] = useState<Investor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,9 +26,13 @@ export function InvestorManagementPage() {
   const [showAddModal, setShowAddModal] = useState(false);
 
   useEffect(() => {
-    loadAssignments();
-    loadAvailableInvestors();
-  }, [user]);
+    if (profile?.role === 'agent') {
+      loadAssignments();
+      loadAvailableInvestors();
+    } else {
+      setLoading(false);
+    }
+  }, [user, profile]);
 
   const loadAssignments = async () => {
     if (!user) return;
@@ -99,6 +103,18 @@ export function InvestorManagementPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-gray-500">Loading...</div>
+      </div>
+    );
+  }
+
+  if (profile?.role !== 'agent') {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <AlertCircle className="h-16 w-16 text-red-400 mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h3>
+          <p className="text-gray-600">This feature is only available to agents.</p>
+        </div>
       </div>
     );
   }
