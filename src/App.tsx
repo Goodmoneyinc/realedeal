@@ -6,11 +6,12 @@ import { DashboardLayout } from './components/Layout/DashboardLayout';
 import { DashboardPage } from './components/Dashboard/DashboardPage';
 import { DealsPage } from './components/Deals/DealsPage';
 import { ContactsPage } from './components/Contacts/ContactsPage';
+import { ProfilePage } from './components/Profile/ProfilePage';
 
 function AppContent() {
   const { user, loading } = useAuth();
   const [authView, setAuthView] = useState<'login' | 'signup'>('login');
-  const [currentView, setCurrentView] = useState<'dashboard' | 'deals' | 'contacts'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'deals' | 'contacts' | 'profile'>('dashboard');
 
   if (loading) {
     return (
@@ -36,6 +37,7 @@ function AppContent() {
       {currentView === 'dashboard' && <DashboardPage />}
       {currentView === 'deals' && <DealsPage />}
       {currentView === 'contacts' && <ContactsPage />}
+      {currentView === 'profile' && <ProfilePage />}
     </DashboardLayout>
   );
 }

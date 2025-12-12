@@ -1,5 +1,5 @@
 import { ReactNode, useState } from 'react';
-import { Building2, LayoutDashboard, Briefcase, Users, LogOut, Menu, X } from 'lucide-react';
+import { Building2, LayoutDashboard, Briefcase, Users, LogOut, Menu, X, UserCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface DashboardLayoutProps {
@@ -10,13 +10,32 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children, currentView, onNavigate }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
 
   const navigation = [
     { name: 'Dashboard', icon: LayoutDashboard, view: 'dashboard' },
     { name: 'Deals', icon: Briefcase, view: 'deals' },
     { name: 'Contacts', icon: Users, view: 'contacts' },
+    { name: 'Profile', icon: UserCircle, view: 'profile' },
   ];
+
+  const getRoleBadgeColor = (role?: string) => {
+    switch (role) {
+      case 'agent': return 'bg-blue-100 text-blue-700';
+      case 'investor': return 'bg-emerald-100 text-emerald-700';
+      case 'lender': return 'bg-amber-100 text-amber-700';
+      default: return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  const getRoleLabel = (role?: string) => {
+    switch (role) {
+      case 'agent': return 'Agent';
+      case 'investor': return 'Investor';
+      case 'lender': return 'Lender';
+      default: return 'User';
+    }
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -72,7 +91,14 @@ export function DashboardLayout({ children, currentView, onNavigate }: Dashboard
 
           <div className="p-4 border-t border-gray-200">
             <div className="bg-gray-50 rounded-lg p-4 mb-4">
-              <div className="text-sm font-semibold text-gray-900 mb-1">Signed in as</div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-semibold text-gray-900">
+                  {profile?.full_name || 'User'}
+                </div>
+                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getRoleBadgeColor(profile?.role)}`}>
+                  {getRoleLabel(profile?.role)}
+                </span>
+              </div>
               <div className="text-sm text-gray-600 truncate">{user?.email}</div>
             </div>
             <button

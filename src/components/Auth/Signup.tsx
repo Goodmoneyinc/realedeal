@@ -1,15 +1,18 @@
 import { useState } from 'react';
-import { Building2, Mail, Lock, User, AlertCircle, CheckCircle } from 'lucide-react';
+import { Building2, Mail, Lock, User, AlertCircle, CheckCircle, Briefcase, TrendingUp, DollarSign } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface SignupProps {
   onToggleView: () => void;
 }
 
+type UserRole = 'agent' | 'investor' | 'lender';
+
 export function Signup({ onToggleView }: SignupProps) {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState<UserRole>('agent');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -27,7 +30,7 @@ export function Signup({ onToggleView }: SignupProps) {
       return;
     }
 
-    const { error } = await signUp(email, password, fullName);
+    const { error } = await signUp(email, password, fullName, role);
 
     if (error) {
       setError(error.message);
@@ -84,6 +87,54 @@ export function Signup({ onToggleView }: SignupProps) {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-2">I am a...</label>
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRole('agent')}
+                  className={`flex flex-col items-center p-4 border-2 rounded-lg transition-all ${
+                    role === 'agent'
+                      ? 'border-emerald-600 bg-emerald-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <Briefcase className={`h-8 w-8 mb-2 ${role === 'agent' ? 'text-emerald-600' : 'text-gray-400'}`} />
+                  <span className={`text-sm font-semibold ${role === 'agent' ? 'text-emerald-900' : 'text-gray-700'}`}>
+                    Agent
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRole('investor')}
+                  className={`flex flex-col items-center p-4 border-2 rounded-lg transition-all ${
+                    role === 'investor'
+                      ? 'border-emerald-600 bg-emerald-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <TrendingUp className={`h-8 w-8 mb-2 ${role === 'investor' ? 'text-emerald-600' : 'text-gray-400'}`} />
+                  <span className={`text-sm font-semibold ${role === 'investor' ? 'text-emerald-900' : 'text-gray-700'}`}>
+                    Investor
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRole('lender')}
+                  className={`flex flex-col items-center p-4 border-2 rounded-lg transition-all ${
+                    role === 'lender'
+                      ? 'border-emerald-600 bg-emerald-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <DollarSign className={`h-8 w-8 mb-2 ${role === 'lender' ? 'text-emerald-600' : 'text-gray-400'}`} />
+                  <span className={`text-sm font-semibold ${role === 'lender' ? 'text-emerald-900' : 'text-gray-700'}`}>
+                    Lender
+                  </span>
+                </button>
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-2">Full Name</label>
               <div className="relative">
