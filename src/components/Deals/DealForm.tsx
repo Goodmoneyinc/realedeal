@@ -22,6 +22,8 @@ export function DealForm({ deal, onClose }: DealFormProps) {
     ask_price: '',
     estimated_profit: '',
     repair_estimate: '',
+    rental_potential: '',
+    zoning: '',
     notes: '',
     image_url: '',
   });
@@ -38,6 +40,8 @@ export function DealForm({ deal, onClose }: DealFormProps) {
         ask_price: deal.ask_price?.toString() || '',
         estimated_profit: deal.estimated_profit?.toString() || '',
         repair_estimate: deal.repair_estimate?.toString() || '',
+        rental_potential: deal.rental_potential?.toString() || '',
+        zoning: deal.zoning || '',
         notes: deal.notes || '',
         image_url: deal.image_url || '',
       });
@@ -62,6 +66,8 @@ export function DealForm({ deal, onClose }: DealFormProps) {
       ask_price: parseFloat(formData.ask_price) || 0,
       estimated_profit: parseFloat(formData.estimated_profit) || 0,
       repair_estimate: parseFloat(formData.repair_estimate) || 0,
+      rental_potential: parseFloat(formData.rental_potential) || 0,
+      zoning: formData.zoning || null,
       notes: formData.notes,
       image_url: formData.image_url || null,
       updated_at: new Date().toISOString(),
@@ -225,6 +231,28 @@ export function DealForm({ deal, onClose }: DealFormProps) {
                 onChange={(e) => setFormData({ ...formData, estimated_profit: e.target.value })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
                 placeholder="45000"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-2">Rental Potential ($/month)</label>
+              <input
+                type="number"
+                value={formData.rental_potential}
+                onChange={(e) => setFormData({ ...formData, rental_potential: e.target.value })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
+                placeholder="2500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-2">Zoning</label>
+              <input
+                type="text"
+                value={formData.zoning}
+                onChange={(e) => setFormData({ ...formData, zoning: e.target.value })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
+                placeholder="Residential R-1"
               />
             </div>
 

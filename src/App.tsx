@@ -7,11 +7,16 @@ import { DashboardPage } from './components/Dashboard/DashboardPage';
 import { DealsPage } from './components/Deals/DealsPage';
 import { ContactsPage } from './components/Contacts/ContactsPage';
 import { ProfilePage } from './components/Profile/ProfilePage';
+import { InvestorManagementPage } from './components/Investors/InvestorManagementPage';
+import { InvestorDealsPage } from './components/Investors/InvestorDealsPage';
+import { LenderReferralsPage } from './components/Lenders/LenderReferralsPage';
+
+type ViewType = 'dashboard' | 'deals' | 'contacts' | 'profile' | 'investors' | 'investor-deals' | 'lender-referrals';
 
 function AppContent() {
   const { user, loading } = useAuth();
   const [authView, setAuthView] = useState<'login' | 'signup'>('login');
-  const [currentView, setCurrentView] = useState<'dashboard' | 'deals' | 'contacts' | 'profile'>('dashboard');
+  const [currentView, setCurrentView] = useState<ViewType>('dashboard');
 
   if (loading) {
     return (
@@ -37,6 +42,9 @@ function AppContent() {
       {currentView === 'dashboard' && <DashboardPage />}
       {currentView === 'deals' && <DealsPage />}
       {currentView === 'contacts' && <ContactsPage />}
+      {currentView === 'investors' && <InvestorManagementPage />}
+      {currentView === 'investor-deals' && <InvestorDealsPage />}
+      {currentView === 'lender-referrals' && <LenderReferralsPage />}
       {currentView === 'profile' && <ProfilePage />}
     </DashboardLayout>
   );

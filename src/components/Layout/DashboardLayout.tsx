@@ -1,5 +1,5 @@
 import { ReactNode, useState } from 'react';
-import { Building2, LayoutDashboard, Briefcase, Users, LogOut, Menu, X, UserCircle } from 'lucide-react';
+import { Building2, LayoutDashboard, Briefcase, Users, LogOut, Menu, X, UserCircle, DollarSign, FileText } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface DashboardLayoutProps {
@@ -12,12 +12,40 @@ export function DashboardLayout({ children, currentView, onNavigate }: Dashboard
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, profile, signOut } = useAuth();
 
-  const navigation = [
-    { name: 'Dashboard', icon: LayoutDashboard, view: 'dashboard' },
-    { name: 'Deals', icon: Briefcase, view: 'deals' },
-    { name: 'Contacts', icon: Users, view: 'contacts' },
-    { name: 'Profile', icon: UserCircle, view: 'profile' },
-  ];
+  const getNavigationForRole = (role?: string) => {
+    const baseNav = [
+      { name: 'Dashboard', icon: LayoutDashboard, view: 'dashboard' },
+    ];
+
+    if (role === 'agent') {
+      return [
+        ...baseNav,
+        { name: 'Deals', icon: Briefcase, view: 'deals' },
+        { name: 'Contacts', icon: Users, view: 'contacts' },
+        { name: 'My Investors', icon: Users, view: 'investors' },
+        { name: 'Profile', icon: UserCircle, view: 'profile' },
+      ];
+    } else if (role === 'investor') {
+      return [
+        ...baseNav,
+        { name: 'Available Deals', icon: DollarSign, view: 'investor-deals' },
+        { name: 'Profile', icon: UserCircle, view: 'profile' },
+      ];
+    } else if (role === 'lender') {
+      return [
+        ...baseNav,
+        { name: 'Referrals', icon: FileText, view: 'lender-referrals' },
+        { name: 'Profile', icon: UserCircle, view: 'profile' },
+      ];
+    }
+
+    return [
+      ...baseNav,
+      { name: 'Profile', icon: UserCircle, view: 'profile' },
+    ];
+  };
+
+  const navigation = getNavigationForRole(profile?.role);
 
   const getRoleBadgeColor = (role?: string) => {
     switch (role) {
