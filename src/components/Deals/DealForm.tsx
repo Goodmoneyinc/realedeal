@@ -13,8 +13,9 @@ export function DealForm({ deal, onClose }: DealFormProps) {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>('');
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [existingImages, setExistingImages] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     title: '',
     location: '',
@@ -48,62 +49,112 @@ export function DealForm({ deal, onClose }: DealFormProps) {
         notes: deal.notes || '',
         image_url: deal.image_url || '',
       });
-      if (deal.image_url) {
-        setImagePreview(deal.image_url);
-      }
+
+      loadExistingImages(deal.id);
     }
   }, [deal]);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const loadExistingImages = async (dealId: string) => {
+    const { data, error } = await supabase
+      .from('property_images')
+      .select('*')
+      .eq('deal_id', dealId)
+      .order('display_order', { ascending: true });
 
-    if (!file.type.startsWith('image/')) {
-      setError('Please select an image file');
-      return;
+    if (!error && data) {
+      setExistingImages(data);
     }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Image size must be less than 5MB');
-      return;
-    }
-
-    setImageFile(file);
-    setError('');
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
   };
 
-  const uploadImage = async (dealId: string): Promise<string | null> => {
-    if (!imageFile || !user) return null;
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
-    setUploading(true);
-    const fileExt = imageFile.name.split('.').pop();
-    const fileName = `${user.id}/${dealId}/${Date.now()}.${fileExt}`;
+    const validFiles: File[] = [];
+    const previews: string[] = [];
 
-    const { data, error: uploadError } = await supabase.storage
-      .from('property-images')
-      .upload(fileName, imageFile, {
-        cacheControl: '3600',
-        upsert: false
-      });
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) {
+        setError('Please select only image files');
+        return;
+      }
 
-    setUploading(false);
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Each image must be less than 5MB');
+        return;
+      }
 
-    if (uploadError) {
-      console.error('Upload error:', uploadError);
-      return null;
+      validFiles.push(file);
     }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('property-images')
-      .getPublicUrl(fileName);
+    setImageFiles([...imageFiles, ...validFiles]);
+    setError('');
 
-    return publicUrl;
+    validFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreviews(prev => [...prev, reader.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    e.target.value = '';
+  };
+
+  const removeNewImage = (index: number) => {
+    setImageFiles(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeExistingImage = async (imageId: string) => {
+    const { error } = await supabase
+      .from('property_images')
+      .delete()
+      .eq('id', imageId);
+
+    if (!error) {
+      setExistingImages(prev => prev.filter(img => img.id !== imageId));
+    }
+  };
+
+  const uploadImages = async (dealId: string): Promise<void> => {
+    if (imageFiles.length === 0 || !user) return;
+
+    setUploading(true);
+
+    try {
+      for (let i = 0; i < imageFiles.length; i++) {
+        const file = imageFiles[i];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}/${dealId}/${Date.now()}_${i}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('property-images')
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          continue;
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('property-images')
+          .getPublicUrl(fileName);
+
+        await supabase
+          .from('property_images')
+          .insert({
+            deal_id: dealId,
+            image_url: publicUrl,
+            display_order: existingImages.length + i
+          });
+      }
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -114,16 +165,7 @@ export function DealForm({ deal, onClose }: DealFormProps) {
     setError('');
 
     try {
-      let imageUrl = formData.image_url;
-
       if (deal) {
-        if (imageFile) {
-          const uploadedUrl = await uploadImage(deal.id);
-          if (uploadedUrl) {
-            imageUrl = uploadedUrl;
-          }
-        }
-
         const dealData = {
           user_id: user.id,
           title: formData.title,
@@ -138,7 +180,6 @@ export function DealForm({ deal, onClose }: DealFormProps) {
           rental_potential: parseFloat(formData.rental_potential) || 0,
           zoning: formData.zoning || null,
           notes: formData.notes,
-          image_url: imageUrl || null,
           updated_at: new Date().toISOString(),
         };
 
@@ -148,6 +189,8 @@ export function DealForm({ deal, onClose }: DealFormProps) {
           .eq('id', deal.id);
 
         if (error) throw error;
+
+        await uploadImages(deal.id);
         onClose();
       } else {
         const dealData = {
@@ -176,14 +219,8 @@ export function DealForm({ deal, onClose }: DealFormProps) {
 
         if (insertError) throw insertError;
 
-        if (imageFile && newDeal) {
-          const uploadedUrl = await uploadImage(newDeal.id);
-          if (uploadedUrl) {
-            await supabase
-              .from('deals')
-              .update({ image_url: uploadedUrl })
-              .eq('id', newDeal.id);
-          }
+        if (newDeal) {
+          await uploadImages(newDeal.id);
         }
 
         onClose();
@@ -353,47 +390,69 @@ export function DealForm({ deal, onClose }: DealFormProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2">Property Image</label>
+            <label className="block text-sm font-semibold text-gray-900 mb-2">Property Images</label>
             <div className="space-y-4">
-              {imagePreview && (
-                <div className="relative w-full h-64 rounded-lg overflow-hidden border border-gray-300">
-                  <img
-                    src={imagePreview}
-                    alt="Property preview"
-                    className="w-full h-full object-cover"
-                  />
+              {(existingImages.length > 0 || imagePreviews.length > 0) && (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {existingImages.map((img) => (
+                    <div key={img.id} className="relative group">
+                      <div className="relative h-40 rounded-lg overflow-hidden border border-gray-300">
+                        <img
+                          src={img.image_url}
+                          alt="Property"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeExistingImage(img.id)}
+                        className="absolute top-2 right-2 p-1.5 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                  {imagePreviews.map((preview, index) => (
+                    <div key={`new-${index}`} className="relative group">
+                      <div className="relative h-40 rounded-lg overflow-hidden border border-gray-300">
+                        <img
+                          src={preview}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeNewImage(index)}
+                        className="absolute top-2 right-2 p-1.5 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
-              <div className="flex items-center gap-4">
-                <label className="flex-1 cursor-pointer">
-                  <div className="flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-emerald-500 hover:bg-emerald-50 transition-colors">
-                    <Upload className="h-5 w-5 text-gray-400 mr-2" />
-                    <span className="text-sm font-medium text-gray-700">
-                      {imageFile ? imageFile.name : 'Choose an image'}
+              <label className="cursor-pointer">
+                <div className="flex items-center justify-center px-4 py-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-emerald-500 hover:bg-emerald-50 transition-colors">
+                  <Upload className="h-6 w-6 text-gray-400 mr-3" />
+                  <div className="text-center">
+                    <span className="text-sm font-medium text-gray-700 block">
+                      Click to upload images
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {imageFiles.length > 0 ? `${imageFiles.length} file(s) selected` : 'Select multiple images'}
                     </span>
                   </div>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="hidden"
-                  />
-                </label>
-                {imagePreview && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setImageFile(null);
-                      setImagePreview('');
-                      setFormData({ ...formData, image_url: '' });
-                    }}
-                    className="px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
-              <p className="text-xs text-gray-500">Supported formats: JPG, PNG, GIF (max 5MB)</p>
+                </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+              </label>
+              <p className="text-xs text-gray-500">Supported formats: JPG, PNG, GIF (max 5MB each)</p>
             </div>
           </div>
 

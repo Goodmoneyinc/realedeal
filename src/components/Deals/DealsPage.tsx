@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, DollarSign, MapPin, TrendingUp, Edit, Trash2, Briefcase, Building2, AlertCircle } from 'lucide-react';
+import { Plus, Search, DollarSign, MapPin, TrendingUp, Edit, Trash2, Briefcase, Building2, AlertCircle, Images } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { DealForm } from './DealForm';
+import { ImageGallery } from './ImageGallery';
 
 interface Deal {
   id: string;
@@ -24,6 +25,9 @@ export function DealsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [dealImages, setDealImages] = useState<Record<string, string[]>>({});
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
+  const [showGallery, setShowGallery] = useState(false);
   const { user, profile } = useAuth();
 
   useEffect(() => {
@@ -46,8 +50,33 @@ export function DealsPage() {
 
     if (!error && data) {
       setDeals(data);
+      await loadPropertyImages(data);
     }
     setLoading(false);
+  };
+
+  const loadPropertyImages = async (dealsData: Deal[]) => {
+    const imagesMap: Record<string, string[]> = {};
+
+    for (const deal of dealsData) {
+      const { data } = await supabase
+        .from('property_images')
+        .select('image_url')
+        .eq('deal_id', deal.id)
+        .order('display_order', { ascending: true });
+
+      if (data && data.length > 0) {
+        imagesMap[deal.id] = data.map(img => img.image_url);
+      }
+    }
+
+    setDealImages(imagesMap);
+  };
+
+  const openGallery = (dealId: string) => {
+    const images = dealImages[dealId] || [];
+    setGalleryImages(images);
+    setShowGallery(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -110,10 +139,6 @@ export function DealsPage() {
         </div>
       </div>
     );
-  }
-
-  if (showForm) {
-    return <DealForm deal={editingDeal} onClose={handleFormClose} />;
   }
 
   return (
@@ -183,22 +208,36 @@ export function DealsPage() {
         </div>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredDeals.map((deal) => (
-            <div key={deal.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-              <div className="relative h-48 bg-gray-200">
-                {deal.image_url ? (
-                  <img src={deal.image_url} alt={deal.title} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Building2 className="h-16 w-16 text-gray-400" />
+          {filteredDeals.map((deal) => {
+            const images = dealImages[deal.id] || [];
+            const hasImages = images.length > 0;
+            const firstImage = hasImages ? images[0] : null;
+
+            return (
+              <div key={deal.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+                <div
+                  className="relative h-48 bg-gray-200 cursor-pointer"
+                  onClick={() => hasImages && openGallery(deal.id)}
+                >
+                  {firstImage ? (
+                    <img src={firstImage} alt={deal.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Building2 className="h-16 w-16 text-gray-400" />
+                    </div>
+                  )}
+                  <div className="absolute top-3 right-3">
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(deal.status)}`}>
+                      {deal.status.replace('-', ' ').toUpperCase()}
+                    </span>
                   </div>
-                )}
-                <div className="absolute top-3 right-3">
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(deal.status)}`}>
-                    {deal.status.replace('-', ' ').toUpperCase()}
-                  </span>
+                  {hasImages && images.length > 1 && (
+                    <div className="absolute bottom-3 right-3 bg-black bg-opacity-70 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                      <Images className="h-3 w-3" />
+                      {images.length}
+                    </div>
+                  )}
                 </div>
-              </div>
 
               <div className="p-6">
                 <h3 className="text-lg font-bold text-gray-900 mb-2">{deal.title}</h3>
@@ -239,9 +278,13 @@ export function DealsPage() {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
+
+      {showForm && <DealForm deal={editingDeal} onClose={handleFormClose} />}
+      {showGallery && <ImageGallery images={galleryImages} onClose={() => setShowGallery(false)} />}
     </div>
   );
 }
