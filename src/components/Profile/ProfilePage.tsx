@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { UserCircle, Mail, Phone, Building, FileText, Save, AlertCircle, CheckCircle, Briefcase, TrendingUp, DollarSign, Camera, Upload } from 'lucide-react';
+import { UserCircle, Mail, Phone, Building, FileText, Save, AlertCircle, CheckCircle, Briefcase, TrendingUp, DollarSign, Camera, Upload, CreditCard, ExternalLink } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 
@@ -11,6 +11,7 @@ export function ProfilePage() {
   const [success, setSuccess] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>('');
+  const [stripeLoading, setStripeLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -153,6 +154,79 @@ export function ProfilePage() {
     }
   };
 
+  const handleStripeConnect = async () => {
+    setStripeLoading(true);
+    setError('');
+
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const token = session.session?.access_token;
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-connect-onboard`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to create Stripe Connect account');
+      }
+
+      window.location.href = result.url;
+    } catch (err: any) {
+      console.error('Stripe Connect error:', err);
+      setError(err.message || 'Failed to connect to Stripe');
+    } finally {
+      setStripeLoading(false);
+    }
+  };
+
+  const checkStripeStatus = async () => {
+    if (!profile?.stripe_connect_account_id) return;
+
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const token = session.session?.access_token;
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-check-account`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            accountId: profile.stripe_connect_account_id,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+        await refreshProfile();
+      }
+    } catch (err) {
+      console.error('Stripe status check error:', err);
+    }
+  };
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('stripe_connected') === 'true') {
+      checkStripeStatus();
+      window.history.replaceState({}, '', '/profile');
+    }
+  }, []);
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-8">
@@ -182,6 +256,84 @@ export function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {profile?.role === 'agent' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-blue-50 rounded-lg">
+                <CreditCard className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Payment Settings</h3>
+                <p className="text-sm text-gray-600">Connect your Stripe account to receive payments</p>
+              </div>
+            </div>
+          </div>
+
+          {profile.stripe_charges_enabled ? (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-green-900 mb-1">Stripe Connected</p>
+                  <p className="text-sm text-green-800">
+                    Your account is connected and ready to accept payments. The platform will automatically collect a 0.5% fee on each transaction.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : profile.stripe_connect_account_id ? (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-yellow-900 mb-1">Setup Incomplete</p>
+                  <p className="text-sm text-yellow-800 mb-3">
+                    Complete your Stripe account setup to start accepting payments
+                  </p>
+                  <button
+                    onClick={handleStripeConnect}
+                    disabled={stripeLoading}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    {stripeLoading ? 'Loading...' : 'Complete Setup'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800 mb-3">
+                  Connect your Stripe account to receive payments from investors. The platform automatically deducts a 0.5% fee on each transaction.
+                </p>
+                <div className="flex items-start gap-2 text-xs text-blue-700 mb-3">
+                  <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <span>Secure payment processing</span>
+                </div>
+                <div className="flex items-start gap-2 text-xs text-blue-700 mb-3">
+                  <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <span>Automatic 0.5% platform fee deduction</span>
+                </div>
+                <div className="flex items-start gap-2 text-xs text-blue-700">
+                  <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <span>Direct deposits to your bank account</span>
+                </div>
+              </div>
+              <button
+                onClick={handleStripeConnect}
+                disabled={stripeLoading}
+                className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-semibold"
+              >
+                <CreditCard className="w-5 h-5" />
+                {stripeLoading ? 'Connecting...' : 'Connect with Stripe'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {success && (
         <div className="mb-6 bg-emerald-50 border border-emerald-200 rounded-lg p-4 flex items-start">
