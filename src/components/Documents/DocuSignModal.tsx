@@ -7,6 +7,7 @@ interface DocuSignModalProps {
   document: {
     id: string;
     title: string;
+    file_path?: string;
   };
   onClose: () => void;
   onSuccess: () => void;
@@ -24,12 +25,33 @@ export function DocuSignModal({ document, onClose, onSuccess }: DocuSignModalPro
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [filePath, setFilePath] = useState('');
   const [signers, setSigners] = useState<Signer[]>([{
     id: '1',
     email: '',
     name: '',
     order: 1
   }]);
+
+  useEffect(() => {
+    if (!document.file_path) {
+      fetchDocumentDetails();
+    } else {
+      setFilePath(document.file_path);
+    }
+  }, []);
+
+  const fetchDocumentDetails = async () => {
+    const { data, error } = await supabase
+      .from('documents')
+      .select('file_path')
+      .eq('id', document.id)
+      .single();
+
+    if (!error && data) {
+      setFilePath(data.file_path);
+    }
+  };
 
   const addSigner = () => {
     setSigners([...signers, {
@@ -65,43 +87,52 @@ export function DocuSignModal({ document, onClose, onSuccess }: DocuSignModalPro
       return;
     }
 
+    if (!filePath) {
+      setError('Document file not found');
+      setLoading(false);
+      return;
+    }
+
     try {
-      const envelopeId = `env_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const { data: { session } } = await supabase.auth.getSession();
 
-      const { error: updateError } = await supabase
-        .from('documents')
-        .update({
-          status: 'pending_signature',
-          docusign_envelope_id: envelopeId,
-          updated_at: new Date().toISOString()
+      if (!session) {
+        throw new Error('Not authenticated');
+      }
+
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/docusign-create-envelope`;
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          documentId: document.id,
+          documentTitle: document.title,
+          filePath: filePath,
+          signers: signers.map(s => ({
+            email: s.email,
+            name: s.name,
+            order: s.order
+          }))
         })
-        .eq('id', document.id);
-
-      if (updateError) throw updateError;
-
-      const signatureInserts = signers.map(signer => ({
-        document_id: document.id,
-        signer_email: signer.email,
-        signer_name: signer.name,
-        signing_order: signer.order,
-        status: 'pending',
-        docusign_recipient_id: `rcpt_${Date.now()}_${signer.order}`
-      }));
-
-      const { error: signatureError } = await supabase
-        .from('document_signatures')
-        .insert(signatureInserts);
-
-      if (signatureError) throw signatureError;
-
-      await supabase.from('document_activity').insert({
-        document_id: document.id,
-        user_id: user?.id,
-        action: 'signature_requested',
-        details: `Requested signatures from ${signers.length} recipient(s)`
       });
 
-      setSuccess('Signature request sent successfully!');
+      const result = await response.json();
+
+      if (!response.ok) {
+        if (result.needsConfiguration) {
+          setError('DocuSign is not configured. Please contact your administrator to set up DocuSign integration.');
+        } else {
+          throw new Error(result.error || 'Failed to create envelope');
+        }
+        setLoading(false);
+        return;
+      }
+
+      setSuccess('Signature request sent successfully via DocuSign!');
       setTimeout(() => {
         onSuccess();
       }, 1500);
