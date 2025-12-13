@@ -34,6 +34,7 @@ export function DashboardLayout({ children, currentView, onNavigate }: Dashboard
         ...baseNav,
         { name: 'My Portal', icon: LayoutGrid, view: 'client-portal' },
         { name: 'Available Deals', icon: DollarSign, view: 'investor-deals' },
+        { name: 'Documents', icon: FolderOpen, view: 'documents' },
         { name: 'Profile', icon: UserCircle, view: 'profile' },
       ];
     } else if (role === 'lender') {
@@ -42,6 +43,7 @@ export function DashboardLayout({ children, currentView, onNavigate }: Dashboard
         { name: 'My Portal', icon: LayoutGrid, view: 'client-portal' },
         { name: 'Financing Tool', icon: DollarSign, view: 'financing-tool' },
         { name: 'Referrals', icon: FileText, view: 'lender-referrals' },
+        { name: 'Documents', icon: FolderOpen, view: 'documents' },
         { name: 'Profile', icon: UserCircle, view: 'profile' },
       ];
     }
