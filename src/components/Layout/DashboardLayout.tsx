@@ -1,5 +1,5 @@
 import { ReactNode, useState } from 'react';
-import { Building2, LayoutDashboard, Briefcase, Users, LogOut, Menu, X, UserCircle, DollarSign, FileText, ArrowRightLeft, FolderOpen } from 'lucide-react';
+import { Building2, LayoutDashboard, Briefcase, Users, LogOut, Menu, X, UserCircle, DollarSign, FileText, ArrowRightLeft, FolderOpen, Sparkles, Workflow, LayoutGrid } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface DashboardLayoutProps {
@@ -24,18 +24,22 @@ export function DashboardLayout({ children, currentView, onNavigate }: Dashboard
         { name: 'Contacts', icon: Users, view: 'contacts' },
         { name: 'Transaction Pipeline', icon: ArrowRightLeft, view: 'transactions' },
         { name: 'Documents', icon: FolderOpen, view: 'documents' },
+        { name: 'Vendors', icon: Workflow, view: 'vendors' },
+        { name: 'Email Co-Pilot', icon: Sparkles, view: 'copilot' },
         { name: 'My Investors', icon: Users, view: 'investors' },
         { name: 'Profile', icon: UserCircle, view: 'profile' },
       ];
     } else if (role === 'investor') {
       return [
         ...baseNav,
+        { name: 'My Portal', icon: LayoutGrid, view: 'client-portal' },
         { name: 'Available Deals', icon: DollarSign, view: 'investor-deals' },
         { name: 'Profile', icon: UserCircle, view: 'profile' },
       ];
     } else if (role === 'lender') {
       return [
         ...baseNav,
+        { name: 'My Portal', icon: LayoutGrid, view: 'client-portal' },
         { name: 'Referrals', icon: FileText, view: 'lender-referrals' },
         { name: 'Profile', icon: UserCircle, view: 'profile' },
       ];

@@ -12,8 +12,11 @@ import { InvestorDealsPage } from './components/Investors/InvestorDealsPage';
 import { LenderReferralsPage } from './components/Lenders/LenderReferralsPage';
 import { TransactionPipelinePage } from './components/Transactions/TransactionPipelinePage';
 import { DocumentHubPage } from './components/Documents/DocumentHubPage';
+import VendorManagementPage from './components/Vendors/VendorManagementPage';
+import ClientPortalPage from './components/ClientPortal/ClientPortalPage';
+import CoPilotPage from './components/CoPilot/CoPilotPage';
 
-type ViewType = 'dashboard' | 'deals' | 'contacts' | 'profile' | 'investors' | 'investor-deals' | 'lender-referrals' | 'transactions' | 'documents';
+type ViewType = 'dashboard' | 'deals' | 'contacts' | 'profile' | 'investors' | 'investor-deals' | 'lender-referrals' | 'transactions' | 'documents' | 'vendors' | 'client-portal' | 'copilot';
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -46,6 +49,9 @@ function AppContent() {
       {currentView === 'contacts' && <ContactsPage />}
       {currentView === 'transactions' && <TransactionPipelinePage />}
       {currentView === 'documents' && <DocumentHubPage />}
+      {currentView === 'vendors' && <VendorManagementPage />}
+      {currentView === 'copilot' && <CoPilotPage />}
+      {currentView === 'client-portal' && <ClientPortalPage />}
       {currentView === 'investors' && <InvestorManagementPage />}
       {currentView === 'investor-deals' && <InvestorDealsPage />}
       {currentView === 'lender-referrals' && <LenderReferralsPage />}
