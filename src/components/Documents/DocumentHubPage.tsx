@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Upload, Search, Filter, FolderOpen, FileText, CheckCircle, Clock, AlertCircle, Share2 } from 'lucide-react';
+import { Upload, Search, Filter, FolderOpen, FileText, CheckCircle, Clock } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { DocumentCard } from './DocumentCard';

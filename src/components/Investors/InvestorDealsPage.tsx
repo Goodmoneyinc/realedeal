@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Home, DollarSign, Building2, TrendingUp, FileText, X, AlertCircle, Send } from 'lucide-react';
+import { Home, Building2, X, AlertCircle, Send } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 

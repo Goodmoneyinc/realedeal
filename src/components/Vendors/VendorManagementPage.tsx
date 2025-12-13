@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { Plus, Search, Star, Mail, Phone, MapPin, Briefcase, Edit2, Trash2, CheckCircle } from 'lucide-react';
@@ -42,7 +42,6 @@ const CATEGORIES = [
 ];
 
 export default function VendorManagementPage() {
-  const { user } = useAuth();
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [tasks, setTasks] = useState<VendorTask[]>([]);
   const [searchTerm, setSearchTerm] = useState('');

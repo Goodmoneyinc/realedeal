@@ -51,7 +51,11 @@ export function InvestorManagementPage() {
     if (error) {
       setError(error.message);
     } else {
-      setAssignments(data || []);
+      const transformedData = (data || []).map((item: any) => ({
+        ...item,
+        investor: Array.isArray(item.investor) ? item.investor[0] : item.investor
+      }));
+      setAssignments(transformedData);
     }
     setLoading(false);
   };

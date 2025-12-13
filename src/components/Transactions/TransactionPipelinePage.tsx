@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, FileText, FileCheck, Search, Home, CheckSquare, X } from 'lucide-react';
+import { Plus, FileText, FileCheck, Search, Home, CheckSquare } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { PipelineStage } from './PipelineStage';
@@ -31,6 +31,7 @@ interface ChecklistItem {
   id: string;
   is_completed: boolean;
   stage: string;
+  pipeline_id: string;
 }
 
 export function TransactionPipelinePage() {
@@ -202,7 +203,12 @@ export function TransactionPipelinePage() {
               onDragStart={handleDragStart}
               onDragOver={handleDragOver}
               onDrop={handleDrop}
-              onTransactionClick={setSelectedTransaction}
+              onTransactionClick={(transaction) => {
+                const originalTransaction = transactions.find(t => t.id === transaction.id);
+                if (originalTransaction) {
+                  setSelectedTransaction(originalTransaction);
+                }
+              }}
             />
           ))}
         </div>

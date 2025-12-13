@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, MapPin, DollarSign, Calendar, Building, FileText } from 'lucide-react';
+import { X, MapPin, DollarSign, Calendar, Building } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 

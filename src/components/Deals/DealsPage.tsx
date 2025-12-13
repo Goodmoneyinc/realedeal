@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, DollarSign, MapPin, TrendingUp, Edit, Trash2, Briefcase, Building2, AlertCircle, Images } from 'lucide-react';
+import { Plus, Search, MapPin, Edit, Trash2, Briefcase, Building2, AlertCircle, Images } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { DealForm } from './DealForm';

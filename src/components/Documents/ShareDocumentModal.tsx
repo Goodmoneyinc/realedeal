@@ -26,7 +26,7 @@ interface Share {
   created_at: string;
 }
 
-export function ShareDocumentModal({ document, onClose, onSuccess }: ShareDocumentModalProps) {
+export function ShareDocumentModal({ document, onClose }: ShareDocumentModalProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import EmailCoPilotModal from './EmailCoPilotModal';
-import { Mail, Sparkles, Clock, CheckCircle, Calendar } from 'lucide-react';
+import { Mail, Sparkles, CheckCircle, Calendar } from 'lucide-react';
 
 export default function CoPilotPage() {
   const [showEmailModal, setShowEmailModal] = useState(false);

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, UserPlus, Mail, Trash2, AlertCircle, CheckCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../contexts/AuthContext';
 
 interface DocuSignModalProps {
   document: {
@@ -21,7 +20,6 @@ interface Signer {
 }
 
 export function DocuSignModal({ document, onClose, onSuccess }: DocuSignModalProps) {
-  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');

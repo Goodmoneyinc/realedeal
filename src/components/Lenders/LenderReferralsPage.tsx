@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, DollarSign, TrendingUp, AlertCircle, X } from 'lucide-react';
+import { FileText, AlertCircle, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -79,7 +79,12 @@ export function LenderReferralsPage() {
     if (error) {
       setError(error.message);
     } else {
-      setReferrals(data || []);
+      const transformedData = (data || []).map((item: any) => ({
+        ...item,
+        deal: Array.isArray(item.deal) ? item.deal[0] : item.deal,
+        investor: Array.isArray(item.investor) ? item.investor[0] : item.investor
+      }));
+      setReferrals(transformedData);
     }
     setLoading(false);
   };

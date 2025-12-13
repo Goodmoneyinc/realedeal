@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, AlertCircle, Upload, Image as ImageIcon } from 'lucide-react';
+import { X, AlertCircle, Upload } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -71,7 +71,6 @@ export function DealForm({ deal, onClose }: DealFormProps) {
     if (files.length === 0) return;
 
     const validFiles: File[] = [];
-    const previews: string[] = [];
 
     for (const file of files) {
       if (!file.type.startsWith('image/')) {
