@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, AlertCircle } from 'lucide-react';
+import { X, AlertCircle, Upload, Image as ImageIcon } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -11,7 +11,10 @@ interface DealFormProps {
 export function DealForm({ deal, onClose }: DealFormProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
   const [formData, setFormData] = useState({
     title: '',
     location: '',
@@ -45,8 +48,63 @@ export function DealForm({ deal, onClose }: DealFormProps) {
         notes: deal.notes || '',
         image_url: deal.image_url || '',
       });
+      if (deal.image_url) {
+        setImagePreview(deal.image_url);
+      }
     }
   }, [deal]);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Image size must be less than 5MB');
+      return;
+    }
+
+    setImageFile(file);
+    setError('');
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const uploadImage = async (dealId: string): Promise<string | null> => {
+    if (!imageFile || !user) return null;
+
+    setUploading(true);
+    const fileExt = imageFile.name.split('.').pop();
+    const fileName = `${user.id}/${dealId}/${Date.now()}.${fileExt}`;
+
+    const { data, error: uploadError } = await supabase.storage
+      .from('property-images')
+      .upload(fileName, imageFile, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    setUploading(false);
+
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      return null;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('property-images')
+      .getPublicUrl(fileName);
+
+    return publicUrl;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,47 +113,84 @@ export function DealForm({ deal, onClose }: DealFormProps) {
     setLoading(true);
     setError('');
 
-    const dealData = {
-      user_id: user.id,
-      title: formData.title,
-      location: formData.location,
-      property_type: formData.property_type,
-      deal_type: formData.deal_type,
-      status: formData.status,
-      arv: parseFloat(formData.arv) || 0,
-      ask_price: parseFloat(formData.ask_price) || 0,
-      estimated_profit: parseFloat(formData.estimated_profit) || 0,
-      repair_estimate: parseFloat(formData.repair_estimate) || 0,
-      rental_potential: parseFloat(formData.rental_potential) || 0,
-      zoning: formData.zoning || null,
-      notes: formData.notes,
-      image_url: formData.image_url || null,
-      updated_at: new Date().toISOString(),
-    };
+    try {
+      let imageUrl = formData.image_url;
 
-    if (deal) {
-      const { error } = await supabase
-        .from('deals')
-        .update(dealData)
-        .eq('id', deal.id);
+      if (deal) {
+        if (imageFile) {
+          const uploadedUrl = await uploadImage(deal.id);
+          if (uploadedUrl) {
+            imageUrl = uploadedUrl;
+          }
+        }
 
-      if (error) {
-        setError(error.message);
-        setLoading(false);
+        const dealData = {
+          user_id: user.id,
+          title: formData.title,
+          location: formData.location,
+          property_type: formData.property_type,
+          deal_type: formData.deal_type,
+          status: formData.status,
+          arv: parseFloat(formData.arv) || 0,
+          ask_price: parseFloat(formData.ask_price) || 0,
+          estimated_profit: parseFloat(formData.estimated_profit) || 0,
+          repair_estimate: parseFloat(formData.repair_estimate) || 0,
+          rental_potential: parseFloat(formData.rental_potential) || 0,
+          zoning: formData.zoning || null,
+          notes: formData.notes,
+          image_url: imageUrl || null,
+          updated_at: new Date().toISOString(),
+        };
+
+        const { error } = await supabase
+          .from('deals')
+          .update(dealData)
+          .eq('id', deal.id);
+
+        if (error) throw error;
+        onClose();
       } else {
+        const dealData = {
+          user_id: user.id,
+          title: formData.title,
+          location: formData.location,
+          property_type: formData.property_type,
+          deal_type: formData.deal_type,
+          status: formData.status,
+          arv: parseFloat(formData.arv) || 0,
+          ask_price: parseFloat(formData.ask_price) || 0,
+          estimated_profit: parseFloat(formData.estimated_profit) || 0,
+          repair_estimate: parseFloat(formData.repair_estimate) || 0,
+          rental_potential: parseFloat(formData.rental_potential) || 0,
+          zoning: formData.zoning || null,
+          notes: formData.notes,
+          image_url: null,
+          updated_at: new Date().toISOString(),
+        };
+
+        const { data: newDeal, error: insertError } = await supabase
+          .from('deals')
+          .insert([dealData])
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+
+        if (imageFile && newDeal) {
+          const uploadedUrl = await uploadImage(newDeal.id);
+          if (uploadedUrl) {
+            await supabase
+              .from('deals')
+              .update({ image_url: uploadedUrl })
+              .eq('id', newDeal.id);
+          }
+        }
+
         onClose();
       }
-    } else {
-      const { error } = await supabase
-        .from('deals')
-        .insert([dealData]);
-
-      if (error) {
-        setError(error.message);
-        setLoading(false);
-      } else {
-        onClose();
-      }
+    } catch (err: any) {
+      setError(err.message || 'An error occurred');
+      setLoading(false);
     }
   };
 
@@ -255,16 +350,50 @@ export function DealForm({ deal, onClose }: DealFormProps) {
                 placeholder="Residential R-1"
               />
             </div>
+          </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-2">Image URL</label>
-              <input
-                type="url"
-                value={formData.image_url}
-                onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
-                placeholder="https://..."
-              />
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-2">Property Image</label>
+            <div className="space-y-4">
+              {imagePreview && (
+                <div className="relative w-full h-64 rounded-lg overflow-hidden border border-gray-300">
+                  <img
+                    src={imagePreview}
+                    alt="Property preview"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+              <div className="flex items-center gap-4">
+                <label className="flex-1 cursor-pointer">
+                  <div className="flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-emerald-500 hover:bg-emerald-50 transition-colors">
+                    <Upload className="h-5 w-5 text-gray-400 mr-2" />
+                    <span className="text-sm font-medium text-gray-700">
+                      {imageFile ? imageFile.name : 'Choose an image'}
+                    </span>
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                </label>
+                {imagePreview && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImageFile(null);
+                      setImagePreview('');
+                      setFormData({ ...formData, image_url: '' });
+                    }}
+                    className="px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-gray-500">Supported formats: JPG, PNG, GIF (max 5MB)</p>
             </div>
           </div>
 
@@ -289,10 +418,10 @@ export function DealForm({ deal, onClose }: DealFormProps) {
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || uploading}
               className="flex-1 px-6 py-3 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Saving...' : (deal ? 'Update Deal' : 'Create Deal')}
+              {uploading ? 'Uploading image...' : loading ? 'Saving...' : (deal ? 'Update Deal' : 'Create Deal')}
             </button>
           </div>
         </form>
