@@ -36,6 +36,8 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({
           error: "DocuSign not configured",
+          message: "Please add DOCUSIGN_ACCOUNT_ID and DOCUSIGN_ACCESS_TOKEN to your environment variables",
+          needsConfiguration: true
         }),
         {
           status: 400,
