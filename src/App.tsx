@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { LandingPage } from './components/Landing/LandingPage';
 import { Login } from './components/Auth/Login';
 import { Signup } from './components/Auth/Signup';
 import { DashboardLayout } from './components/Layout/DashboardLayout';
@@ -20,7 +21,7 @@ type ViewType = 'dashboard' | 'deals' | 'contacts' | 'profile' | 'investors' | '
 
 function AppContent() {
   const { user, loading } = useAuth();
-  const [authView, setAuthView] = useState<'login' | 'signup'>('login');
+  const [authView, setAuthView] = useState<'landing' | 'login' | 'signup'>('landing');
   const [currentView, setCurrentView] = useState<ViewType>('dashboard');
 
   if (loading) {
@@ -35,10 +36,27 @@ function AppContent() {
   }
 
   if (!user) {
-    if (authView === 'login') {
-      return <Login onToggleView={() => setAuthView('signup')} />;
+    if (authView === 'landing') {
+      return (
+        <LandingPage
+          onLogin={() => setAuthView('login')}
+          onSignup={() => setAuthView('signup')}
+        />
+      );
+    } else if (authView === 'login') {
+      return (
+        <Login
+          onToggleView={() => setAuthView('signup')}
+          onBack={() => setAuthView('landing')}
+        />
+      );
     } else {
-      return <Signup onToggleView={() => setAuthView('login')} />;
+      return (
+        <Signup
+          onToggleView={() => setAuthView('login')}
+          onBack={() => setAuthView('landing')}
+        />
+      );
     }
   }
 

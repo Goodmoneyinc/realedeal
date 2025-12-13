@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { Building2, Mail, Lock, User, AlertCircle, CheckCircle, Briefcase, TrendingUp, DollarSign } from 'lucide-react';
+import { Building2, Mail, Lock, User, AlertCircle, CheckCircle, Briefcase, TrendingUp, DollarSign, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface SignupProps {
   onToggleView: () => void;
+  onBack?: () => void;
 }
 
 type UserRole = 'agent' | 'investor' | 'lender';
 
-export function Signup({ onToggleView }: SignupProps) {
+export function Signup({ onToggleView, onBack }: SignupProps) {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -70,6 +71,15 @@ export function Signup({ onToggleView }: SignupProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-gray-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="flex items-center text-gray-600 hover:text-emerald-600 mb-4 transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5 mr-2" />
+            Back to Home
+          </button>
+        )}
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="flex items-center justify-center mb-8">
             <Building2 className="h-12 w-12 text-emerald-600 mr-3" />

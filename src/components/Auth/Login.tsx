@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { Building2, Mail, Lock, AlertCircle } from 'lucide-react';
+import { Building2, Mail, Lock, AlertCircle, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface LoginProps {
   onToggleView: () => void;
+  onBack?: () => void;
 }
 
-export function Login({ onToggleView }: LoginProps) {
+export function Login({ onToggleView, onBack }: LoginProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -29,6 +30,15 @@ export function Login({ onToggleView }: LoginProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-gray-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="flex items-center text-gray-600 hover:text-emerald-600 mb-4 transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5 mr-2" />
+            Back to Home
+          </button>
+        )}
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="flex items-center justify-center mb-8">
             <Building2 className="h-12 w-12 text-emerald-600 mr-3" />
