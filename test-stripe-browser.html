@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stripe Functions Test</title>
+  <script src="https://js.stripe.com/v3/"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+    .section {
+      margin: 30px 0;
+      padding: 20px;
+      background: #f9f9f9;
+      border-radius: 8px;
+      border-left: 4px solid #635bff;
+    }
+    .section h2 {
+      margin-top: 0;
+      color: #635bff;
+    }
+    button {
+      background: #635bff;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background: #4f46e5;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .output {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 15px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .success { color: #4ade80; }
+    .error { color: #f87171; }
+    .warning { color: #fbbf24; }
+    input, select {
+      width: 100%;
+      padding: 10px;
+      margin: 5px 0;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: 600;
+      color: #555;
+    }
+    .status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .status.ready { background: #dcfce7; color: #15803d; }
+    .status.missing { background: #fee2e2; color: #991b1b; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Stripe Payment Functions Test</h1>
+    <p>Test your Stripe Connect payment integration</p>
+
+    <div class="section">
+      <h2>⚙️ Configuration Status</h2>
+      <div id="config-status">Checking...</div>
+    </div>
+
+    <div class="section">
+      <h2>1️⃣ Stripe Connect Onboarding</h2>
+      <p>Test agent Stripe account connection</p>
+      <label>Auth Token (from Application > Local Storage):</label>
+      <input type="text" id="auth-token-1" placeholder="eyJ...">
+      <button onclick="testConnectOnboarding()" id="btn-connect">Test Connect Onboarding</button>
+      <div id="output-1" class="output" style="display:none;"></div>
+    </div>
+
+    <div class="section">
+      <h2>2️⃣ Check Account Status</h2>
+      <p>Verify Stripe account setup completion</p>
+      <label>Auth Token:</label>
+      <input type="text" id="auth-token-2" placeholder="eyJ...">
+      <label>Stripe Account ID:</label>
+      <input type="text" id="account-id" placeholder="acct_...">
+      <button onclick="testCheckStatus()" id="btn-status">Check Status</button>
+      <div id="output-2" class="output" style="display:none;"></div>
+    </div>
+
+    <div class="section">
+      <h2>3️⃣ Process Payment</h2>
+      <p>Test payment with automatic 0.5% platform fee</p>
+      <label>Auth Token:</label>
+      <input type="text" id="auth-token-3" placeholder="eyJ...">
+      <label>Deal ID:</label>
+      <input type="text" id="deal-id" placeholder="Get from deals table">
+      <label>Amount ($):</label>
+      <input type="number" id="amount" value="10000" step="0.01">
+      <label>Payment Type:</label>
+      <select id="payment-type">
+        <option value="earnest_money">Earnest Money</option>
+        <option value="platform_fee">Platform Fee</option>
+        <option value="commission">Commission</option>
+        <option value="closing_cost">Closing Cost</option>
+      </select>
+      <label>Card Details (Test Card):</label>
+      <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px;">
+        <input type="text" id="card-number" value="4242424242424242" placeholder="Card Number">
+        <input type="text" id="card-exp" value="12/25" placeholder="MM/YY">
+        <input type="text" id="card-cvc" value="123" placeholder="CVC">
+      </div>
+      <button onclick="testPayment()" id="btn-payment">Process Test Payment</button>
+      <div id="output-3" class="output" style="display:none;"></div>
+    </div>
+
+    <div class="section">
+      <h2>📖 Instructions</h2>
+      <ol>
+        <li>Make sure Stripe keys are configured in your .env file</li>
+        <li>Sign up as an agent and get your auth token from browser Local Storage</li>
+        <li>Test Stripe Connect onboarding first</li>
+        <li>Complete the Stripe onboarding flow</li>
+        <li>Check account status to verify setup</li>
+        <li>Create a deal in the application</li>
+        <li>Test payment processing with test card</li>
+      </ol>
+      <p><strong>Test Card:</strong> 4242 4242 4242 4242 (any future date, any CVC)</p>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+    const STRIPE_PK = 'YOUR_STRIPE_PUBLISHABLE_KEY';
+
+    // Load from env or prompt
+    const supabaseUrl = localStorage.getItem('test_supabase_url') || prompt('Enter Supabase URL:', SUPABASE_URL);
+    const stripePk = localStorage.getItem('test_stripe_pk') || prompt('Enter Stripe Publishable Key:', STRIPE_PK);
+
+    if (supabaseUrl && supabaseUrl !== 'YOUR_SUPABASE_URL') {
+      localStorage.setItem('test_supabase_url', supabaseUrl);
+    }
+    if (stripePk && stripePk !== 'YOUR_STRIPE_PUBLISHABLE_KEY') {
+      localStorage.setItem('test_stripe_pk', stripePk);
+    }
+
+    const stripe = stripePk && stripePk !== 'YOUR_STRIPE_PUBLISHABLE_KEY' ? Stripe(stripePk) : null;
+
+    function checkConfig() {
+      const statusEl = document.getElementById('config-status');
+      let html = '';
+
+      if (supabaseUrl && supabaseUrl !== 'YOUR_SUPABASE_URL') {
+        html += '<span class="status ready">✓ Supabase URL</span> ';
+      } else {
+        html += '<span class="status missing">✗ Supabase URL</span> ';
+      }
+
+      if (stripePk && stripePk !== 'YOUR_STRIPE_PUBLISHABLE_KEY') {
+        html += '<span class="status ready">✓ Stripe Key</span>';
+      } else {
+        html += '<span class="status missing">✗ Stripe Key</span>';
+      }
+
+      statusEl.innerHTML = html;
+    }
+
+    function log(outputId, message, type = 'info') {
+      const output = document.getElementById(outputId);
+      output.style.display = 'block';
+      const span = document.createElement('span');
+      span.className = type;
+      span.textContent = message + '\n';
+      output.appendChild(span);
+      output.scrollTop = output.scrollHeight;
+    }
+
+    function clearLog(outputId) {
+      const output = document.getElementById(outputId);
+      output.innerHTML = '';
+    }
+
+    async function testConnectOnboarding() {
+      clearLog('output-1');
+      const token = document.getElementById('auth-token-1').value;
+
+      if (!token) {
+        log('output-1', '❌ Please enter auth token', 'error');
+        return;
+      }
+
+      log('output-1', '🔄 Testing Stripe Connect onboarding...');
+
+      try {
+        const response = await fetch(
+          `${supabaseUrl}/functions/v1/stripe-connect-onboard`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+          }
+        );
+
+        const result = await response.json();
+
+        if (result.success) {
+          log('output-1', '✅ Onboarding URL created!', 'success');
+          log('output-1', `Account ID: ${result.accountId}`);
+          log('output-1', `URL: ${result.url}`);
+          log('output-1', '\nClick below to continue onboarding:');
+
+          const link = document.createElement('a');
+          link.href = result.url;
+          link.target = '_blank';
+          link.textContent = 'Continue to Stripe →';
+          link.style.color = '#635bff';
+          link.style.fontWeight = 'bold';
+          document.getElementById('output-1').appendChild(link);
+        } else {
+          log('output-1', `❌ Error: ${result.error}`, 'error');
+        }
+      } catch (err) {
+        log('output-1', `❌ Request failed: ${err.message}`, 'error');
+      }
+    }
+
+    async function testCheckStatus() {
+      clearLog('output-2');
+      const token = document.getElementById('auth-token-2').value;
+      const accountId = document.getElementById('account-id').value;
+
+      if (!token || !accountId) {
+        log('output-2', '❌ Please enter auth token and account ID', 'error');
+        return;
+      }
+
+      log('output-2', '🔄 Checking account status...');
+
+      try {
+        const response = await fetch(
+          `${supabaseUrl}/functions/v1/stripe-check-account`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ accountId })
+          }
+        );
+
+        const result = await response.json();
+
+        if (result.success) {
+          log('output-2', '✅ Account status retrieved!', 'success');
+          log('output-2', `Status: ${result.account.status}`);
+          log('output-2', `Charges Enabled: ${result.account.charges_enabled ? '✓' : '✗'}`);
+          log('output-2', `Payouts Enabled: ${result.account.payouts_enabled ? '✓' : '✗'}`);
+          log('output-2', `Details Submitted: ${result.account.details_submitted ? '✓' : '✗'}`);
+        } else {
+          log('output-2', `❌ Error: ${result.error}`, 'error');
+        }
+      } catch (err) {
+        log('output-2', `❌ Request failed: ${err.message}`, 'error');
+      }
+    }
+
+    async function testPayment() {
+      clearLog('output-3');
+      const token = document.getElementById('auth-token-3').value;
+      const dealId = document.getElementById('deal-id').value;
+      const amount = parseFloat(document.getElementById('amount').value);
+      const paymentType = document.getElementById('payment-type').value;
+
+      if (!token || !dealId || !amount) {
+        log('output-3', '❌ Please fill in all fields', 'error');
+        return;
+      }
+
+      if (!stripe) {
+        log('output-3', '❌ Stripe not configured. Please reload with valid publishable key.', 'error');
+        return;
+      }
+
+      log('output-3', '🔄 Creating payment method...');
+
+      try {
+        const cardNumber = document.getElementById('card-number').value;
+        const cardExp = document.getElementById('card-exp').value.split('/');
+        const cardCvc = document.getElementById('card-cvc').value;
+
+        const { error: methodError, paymentMethod } = await stripe.createPaymentMethod({
+          type: 'card',
+          card: {
+            number: cardNumber,
+            exp_month: parseInt(cardExp[0]),
+            exp_year: parseInt('20' + cardExp[1]),
+            cvc: cardCvc,
+          },
+          billing_details: {
+            name: 'Test User',
+          },
+        });
+
+        if (methodError) {
+          log('output-3', `❌ Card error: ${methodError.message}`, 'error');
+          return;
+        }
+
+        log('output-3', `✓ Payment method created: ${paymentMethod.id}`);
+        log('output-3', '🔄 Processing payment...');
+
+        const response = await fetch(
+          `${supabaseUrl}/functions/v1/process-payment`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              dealId,
+              amount,
+              paymentType,
+              paymentMethodId: paymentMethod.id,
+            })
+          }
+        );
+
+        const result = await response.json();
+
+        if (result.success) {
+          log('output-3', '✅ Payment successful!', 'success');
+          log('output-3', `Payment ID: ${result.payment.id}`);
+          log('output-3', `Amount: $${result.payment.amount.toFixed(2)}`);
+          log('output-3', `Platform Fee (0.5%): $${result.payment.platform_fee_amount.toFixed(2)}`);
+          log('output-3', `Agent Receives: $${result.payment.net_amount.toFixed(2)}`);
+          log('output-3', `Status: ${result.payment.status}`);
+        } else {
+          log('output-3', `❌ Error: ${result.error}`, 'error');
+        }
+      } catch (err) {
+        log('output-3', `❌ Request failed: ${err.message}`, 'error');
+      }
+    }
+
+    // Initialize
+    checkConfig();
+  </script>
+</body>
+</html>
