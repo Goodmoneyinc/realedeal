@@ -6,6 +6,10 @@ interface LandingPageProps {
 }
 
 export function LandingPage({ onLogin, onSignup }: LandingPageProps) {
+  const handleStartTrial = () => {
+    localStorage.setItem('stripe_checkout_pending', 'true');
+    onSignup();
+  };
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-gray-50">
       <nav className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50">
@@ -46,7 +50,7 @@ export function LandingPage({ onLogin, onSignup }: LandingPageProps) {
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <button
-                onClick={onSignup}
+                onClick={handleStartTrial}
                 className="bg-emerald-600 text-white px-8 py-4 rounded-lg hover:bg-emerald-700 transition-colors text-lg font-semibold shadow-lg hover:shadow-xl"
               >
                 Start Free Trial
@@ -110,7 +114,7 @@ export function LandingPage({ onLogin, onSignup }: LandingPageProps) {
               Join hundreds of real estate professionals who trust our platform
             </p>
             <button
-              onClick={onSignup}
+              onClick={handleStartTrial}
               className="bg-white text-emerald-600 px-8 py-4 rounded-lg hover:bg-gray-50 transition-colors text-lg font-semibold shadow-xl"
             >
               Get Started Today

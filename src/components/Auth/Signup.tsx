@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Building2, Mail, Lock, User, AlertCircle, CheckCircle, Briefcase, TrendingUp, DollarSign, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { createStripeCheckout } from '../../lib/stripe';
 
 interface SignupProps {
   onToggleView: () => void;
@@ -17,7 +18,8 @@ export function Signup({ onToggleView, onBack }: SignupProps) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { signUp } = useAuth();
+  const [redirectingToCheckout, setRedirectingToCheckout] = useState(false);
+  const { signUp, signIn } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,10 +39,61 @@ export function Signup({ onToggleView, onBack }: SignupProps) {
       setError(error.message);
       setLoading(false);
     } else {
-      setSuccess(true);
-      setLoading(false);
+      const hasCheckoutPending = localStorage.getItem('stripe_checkout_pending') === 'true';
+
+      if (hasCheckoutPending) {
+        localStorage.removeItem('stripe_checkout_pending');
+        setRedirectingToCheckout(true);
+
+        const signInResult = await signIn(email, password);
+        if (signInResult.error) {
+          setError('Account created but sign in failed. Please sign in manually.');
+          setLoading(false);
+          setRedirectingToCheckout(false);
+          return;
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        const priceId = import.meta.env.VITE_STRIPE_PRICE_ID || 'CONFIGURE_STRIPE_PRICE_ID';
+        const { url, error: checkoutError } = await createStripeCheckout({
+          priceId,
+          mode: 'subscription',
+          successUrl: `${window.location.origin}?checkout=success`,
+          cancelUrl: `${window.location.origin}?checkout=cancelled`,
+        });
+
+        if (checkoutError || !url) {
+          setError(checkoutError || 'Failed to create checkout session');
+          setLoading(false);
+          setRedirectingToCheckout(false);
+        } else {
+          window.location.href = url;
+        }
+      } else {
+        setSuccess(true);
+        setLoading(false);
+      }
     }
   };
+
+  if (redirectingToCheckout) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full">
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            <div className="flex items-center justify-center mb-6">
+              <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-emerald-600 border-r-transparent"></div>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">Redirecting to Checkout...</h2>
+            <p className="text-gray-600 text-center">
+              Please wait while we set up your subscription.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (success) {
     return (
