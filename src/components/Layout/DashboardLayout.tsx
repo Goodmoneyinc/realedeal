@@ -80,7 +80,7 @@ export function DashboardLayout({ children, currentView, onNavigate }: Dashboard
       <div className="md:hidden fixed top-0 left-0 right-0 bg-white border-b border-gray-200 z-40 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <Building2 className="h-8 w-8 text-emerald-600" />
-          <span className="text-xl font-bold text-gray-900">REALE DEALS</span>
+          <span className="text-xl font-bold text-gray-900">REAL'E DEAL</span>
         </div>
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -95,7 +95,7 @@ export function DashboardLayout({ children, currentView, onNavigate }: Dashboard
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center space-x-2">
               <Building2 className="h-8 w-8 text-emerald-600" />
-              <span className="text-xl font-bold text-gray-900">REALE DEALS</span>
+              <span className="text-xl font-bold text-gray-900">REAL'E DEAL</span>
             </div>
           </div>
 

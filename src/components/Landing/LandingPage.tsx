@@ -13,7 +13,7 @@ export function LandingPage({ onLogin, onSignup }: LandingPageProps) {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
               <Building2 className="h-8 w-8 text-emerald-600" />
-              <span className="text-xl font-bold text-gray-900">RealEstate CRM</span>
+              <span className="text-xl font-bold text-gray-900">REAL'E DEAL</span>
             </div>
             <div className="flex items-center space-x-4">
               <button
@@ -123,7 +123,7 @@ export function LandingPage({ onLogin, onSignup }: LandingPageProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="flex items-center justify-center space-x-2 mb-4">
             <Building2 className="h-6 w-6 text-emerald-500" />
-            <span className="text-lg font-semibold text-white">RealEstate CRM</span>
+            <span className="text-lg font-semibold text-white">REAL'E DEAL</span>
           </div>
           <p className="text-sm text-gray-400">
             The complete solution for real estate professionals
