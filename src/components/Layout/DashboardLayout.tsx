@@ -99,7 +99,7 @@ export function DashboardLayout({ children, currentView, onNavigate }: Dashboard
             </div>
           </div>
 
-          <nav className="flex-1 p-4 space-y-1">
+          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
             {navigation.map((item) => {
               const Icon = item.icon;
               const isActive = currentView === item.view;
