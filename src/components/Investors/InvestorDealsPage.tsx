@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Home, Building2, X, AlertCircle, Send } from 'lucide-react';
+import { Home, Building2, X, AlertCircle, Send, DollarSign, FileText, CheckCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import PaymentModal from './PaymentModal';
+import ContractSigningModal from './ContractSigningModal';
 
 interface Deal {
   id: string;
@@ -17,6 +19,8 @@ interface Deal {
   notes?: string;
   estimated_profit: number;
   user_id: string;
+  earnest_money_required: number;
+  earnest_money_status: string;
 }
 
 interface DealAction {
@@ -42,6 +46,11 @@ export function InvestorDealsPage() {
   const [declineReason, setDeclineReason] = useState('');
   const [selectedLender, setSelectedLender] = useState('');
   const [earnestMoney, setEarnestMoney] = useState('');
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentDeal, setPaymentDeal] = useState<Deal | null>(null);
+  const [showContractModal, setShowContractModal] = useState(false);
+  const [contractDeal, setContractDeal] = useState<Deal | null>(null);
+  const [contracts, setContracts] = useState<Record<string, any>>({});
 
   useEffect(() => {
     if (profile?.role === 'investor') {
@@ -79,6 +88,11 @@ export function InvestorDealsPage() {
       .select('deal_id, action_type, decline_reason')
       .eq('investor_id', user.id);
 
+    const { data: contractsData } = await supabase
+      .from('deal_contracts')
+      .select('deal_id, status, contract_type, signed_at')
+      .eq('investor_id', user.id);
+
     if (dealsError) {
       setError(dealsError.message);
     } else {
@@ -91,6 +105,15 @@ export function InvestorDealsPage() {
         };
       });
       setDealActions(actionsMap);
+
+      const contractsMap: Record<string, any> = {};
+      contractsData?.forEach(contract => {
+        if (!contractsMap[contract.deal_id]) {
+          contractsMap[contract.deal_id] = [];
+        }
+        contractsMap[contract.deal_id].push(contract);
+      });
+      setContracts(contractsMap);
     }
     setLoading(false);
   };
@@ -115,6 +138,28 @@ export function InvestorDealsPage() {
   const handleReferToLender = async (deal: Deal) => {
     setSelectedDeal(deal);
     setActionType('lender');
+  };
+
+  const handlePayEarnestMoney = (deal: Deal) => {
+    setPaymentDeal(deal);
+    setShowPaymentModal(true);
+  };
+
+  const handleSignContract = (deal: Deal) => {
+    setContractDeal(deal);
+    setShowContractModal(true);
+  };
+
+  const handlePaymentComplete = () => {
+    setShowPaymentModal(false);
+    setPaymentDeal(null);
+    loadDeals();
+  };
+
+  const handleContractComplete = () => {
+    setShowContractModal(false);
+    setContractDeal(null);
+    loadDeals();
   };
 
   const submitAction = async () => {
@@ -262,6 +307,17 @@ export function InvestorDealsPage() {
                         <span className="font-semibold text-gray-900">{deal.zoning}</span>
                       </div>
                     )}
+                    {deal.earnest_money_required > 0 && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-600">Earnest Money:</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-gray-900">${deal.earnest_money_required.toLocaleString()}</span>
+                          {deal.earnest_money_status === 'paid' && (
+                            <CheckCircle className="w-4 h-4 text-green-600" />
+                          )}
+                        </div>
+                      </div>
+                    )}
                     <div className="flex justify-between items-center text-sm pt-2 border-t border-gray-200">
                       <span className="text-gray-600">Est. Profit:</span>
                       <span className="font-bold text-emerald-600 text-lg">${deal.estimated_profit.toLocaleString()}</span>
@@ -269,13 +325,33 @@ export function InvestorDealsPage() {
                   </div>
 
                   {action ? (
-                    <div className={`p-3 rounded-lg text-center font-semibold ${
-                      action.action_type === 'interested'
-                        ? 'bg-emerald-50 text-emerald-700'
-                        : 'bg-red-50 text-red-700'
-                    }`}>
-                      {action.action_type === 'interested' ? 'Interested' : 'Declined'}
-                    </div>
+                    action.action_type === 'interested' ? (
+                      <div className="space-y-2">
+                        <div className="bg-emerald-50 text-emerald-700 p-3 rounded-lg text-center font-semibold">
+                          Interested
+                        </div>
+                        {deal.earnest_money_required > 0 && deal.earnest_money_status !== 'paid' && (
+                          <button
+                            onClick={() => handlePayEarnestMoney(deal)}
+                            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                          >
+                            <DollarSign className="h-4 w-4" />
+                            Pay Earnest Money
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleSignContract(deal)}
+                          className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+                        >
+                          <FileText className="h-4 w-4" />
+                          Sign Contract
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="bg-red-50 text-red-700 p-3 rounded-lg text-center font-semibold">
+                        Declined
+                      </div>
+                    )
                   ) : (
                     <div className="space-y-2">
                       <button
@@ -410,6 +486,34 @@ export function InvestorDealsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {paymentDeal && (
+        <PaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => {
+            setShowPaymentModal(false);
+            setPaymentDeal(null);
+          }}
+          dealId={paymentDeal.id}
+          dealTitle={paymentDeal.title}
+          paymentType="earnest_money"
+          amount={paymentDeal.earnest_money_required}
+          onPaymentComplete={handlePaymentComplete}
+        />
+      )}
+
+      {contractDeal && (
+        <ContractSigningModal
+          isOpen={showContractModal}
+          onClose={() => {
+            setShowContractModal(false);
+            setContractDeal(null);
+          }}
+          dealId={contractDeal.id}
+          dealTitle={contractDeal.title}
+          onComplete={handleContractComplete}
+        />
       )}
     </div>
   );
