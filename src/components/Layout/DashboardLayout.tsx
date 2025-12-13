@@ -40,6 +40,7 @@ export function DashboardLayout({ children, currentView, onNavigate }: Dashboard
       return [
         ...baseNav,
         { name: 'My Portal', icon: LayoutGrid, view: 'client-portal' },
+        { name: 'Financing Tool', icon: DollarSign, view: 'financing-tool' },
         { name: 'Referrals', icon: FileText, view: 'lender-referrals' },
         { name: 'Profile', icon: UserCircle, view: 'profile' },
       ];
