@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
-import { UserCircle, Mail, Phone, Building, FileText, Save, AlertCircle, CheckCircle, Briefcase, TrendingUp, DollarSign } from 'lucide-react';
+import { UserCircle, Mail, Phone, Building, FileText, Save, AlertCircle, CheckCircle, Briefcase, TrendingUp, DollarSign, Camera, Upload } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 
 export function ProfilePage() {
   const { user, profile, refreshProfile } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string>('');
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -24,8 +27,63 @@ export function ProfilePage() {
         phone: profile.phone || '',
         bio: profile.bio || '',
       });
+      if (profile.avatar_url) {
+        setAvatarPreview(profile.avatar_url);
+      }
     }
   }, [profile]);
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file');
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setError('Image size must be less than 2MB');
+      return;
+    }
+
+    setAvatarFile(file);
+    setError('');
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setAvatarPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const uploadAvatar = async (): Promise<string | null> => {
+    if (!avatarFile || !user) return null;
+
+    setUploading(true);
+    const fileExt = avatarFile.name.split('.').pop();
+    const fileName = `${user.id}/avatar.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(fileName, avatarFile, {
+        cacheControl: '3600',
+        upsert: true
+      });
+
+    setUploading(false);
+
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      return null;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(fileName);
+
+    return publicUrl;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,25 +91,38 @@ export function ProfilePage() {
     setSuccess(false);
     setLoading(true);
 
-    const { error } = await supabase
-      .from('user_profiles')
-      .update({
-        full_name: formData.full_name,
-        company_name: formData.company_name,
-        phone: formData.phone,
-        bio: formData.bio,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', user?.id);
+    try {
+      let avatarUrl = profile?.avatar_url;
 
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-    } else {
+      if (avatarFile) {
+        const uploadedUrl = await uploadAvatar();
+        if (uploadedUrl) {
+          avatarUrl = uploadedUrl;
+        }
+      }
+
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          full_name: formData.full_name,
+          company_name: formData.company_name,
+          phone: formData.phone,
+          bio: formData.bio,
+          avatar_url: avatarUrl,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user?.id);
+
+      if (error) throw error;
+
       setSuccess(true);
-      setLoading(false);
+      setAvatarFile(null);
       await refreshProfile();
       setTimeout(() => setSuccess(false), 3000);
+    } catch (err: any) {
+      setError(err.message || 'An error occurred');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -131,6 +202,53 @@ export function ProfilePage() {
 
         <div className="space-y-6">
           <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-2">Profile Picture</label>
+            <div className="flex items-center gap-6">
+              <div className="relative group">
+                <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-200 border-4 border-gray-300">
+                  {avatarPreview ? (
+                    <img
+                      src={avatarPreview}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <UserCircle className="h-20 w-20 text-gray-400" />
+                    </div>
+                  )}
+                </div>
+                <label className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                  <Camera className="h-8 w-8 text-white" />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+              <div className="flex-1">
+                <label className="cursor-pointer">
+                  <div className="flex items-center justify-center px-6 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-emerald-500 hover:bg-emerald-50 transition-colors">
+                    <Upload className="h-5 w-5 text-gray-400 mr-2" />
+                    <span className="text-sm font-medium text-gray-700">
+                      {avatarFile ? avatarFile.name : 'Choose a profile picture'}
+                    </span>
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    className="hidden"
+                  />
+                </label>
+                <p className="text-xs text-gray-500 mt-2">JPG, PNG or GIF (max 2MB)</p>
+              </div>
+            </div>
+          </div>
+
+          <div>
             <label className="block text-sm font-semibold text-gray-900 mb-2">Email</label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -204,11 +322,13 @@ export function ProfilePage() {
           <div className="flex justify-end pt-4 border-t border-gray-200">
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || uploading}
               className="flex items-center space-x-2 px-6 py-3 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Save className="h-5 w-5" />
-              <span>{loading ? 'Saving...' : 'Save Changes'}</span>
+              <span>
+                {uploading ? 'Uploading...' : loading ? 'Saving...' : 'Save Changes'}
+              </span>
             </button>
           </div>
         </div>
