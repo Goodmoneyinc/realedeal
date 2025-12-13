@@ -1,5 +1,5 @@
 import { ReactNode, useState } from 'react';
-import { Building2, LayoutDashboard, Briefcase, Users, LogOut, Menu, X, UserCircle, DollarSign, FileText } from 'lucide-react';
+import { Building2, LayoutDashboard, Briefcase, Users, LogOut, Menu, X, UserCircle, DollarSign, FileText, ArrowRightLeft } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface DashboardLayoutProps {
@@ -22,6 +22,7 @@ export function DashboardLayout({ children, currentView, onNavigate }: Dashboard
         ...baseNav,
         { name: 'Deals', icon: Briefcase, view: 'deals' },
         { name: 'Contacts', icon: Users, view: 'contacts' },
+        { name: 'Transaction Pipeline', icon: ArrowRightLeft, view: 'transactions' },
         { name: 'My Investors', icon: Users, view: 'investors' },
         { name: 'Profile', icon: UserCircle, view: 'profile' },
       ];

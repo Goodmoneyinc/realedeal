@@ -10,8 +10,9 @@ import { ProfilePage } from './components/Profile/ProfilePage';
 import { InvestorManagementPage } from './components/Investors/InvestorManagementPage';
 import { InvestorDealsPage } from './components/Investors/InvestorDealsPage';
 import { LenderReferralsPage } from './components/Lenders/LenderReferralsPage';
+import { TransactionPipelinePage } from './components/Transactions/TransactionPipelinePage';
 
-type ViewType = 'dashboard' | 'deals' | 'contacts' | 'profile' | 'investors' | 'investor-deals' | 'lender-referrals';
+type ViewType = 'dashboard' | 'deals' | 'contacts' | 'profile' | 'investors' | 'investor-deals' | 'lender-referrals' | 'transactions';
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -42,6 +43,7 @@ function AppContent() {
       {currentView === 'dashboard' && <DashboardPage />}
       {currentView === 'deals' && <DealsPage />}
       {currentView === 'contacts' && <ContactsPage />}
+      {currentView === 'transactions' && <TransactionPipelinePage />}
       {currentView === 'investors' && <InvestorManagementPage />}
       {currentView === 'investor-deals' && <InvestorDealsPage />}
       {currentView === 'lender-referrals' && <LenderReferralsPage />}
