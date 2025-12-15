@@ -16,6 +16,8 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    const { returnUrl, refreshUrl } = await req.json().catch(() => ({ returnUrl: null, refreshUrl: null }));
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -38,12 +40,17 @@ Deno.serve(async (req: Request) => {
 
     const { data: profile, error: profileError } = await supabaseClient
       .from('user_profiles')
-      .select('role, stripe_connect_account_id, email, full_name')
+      .select('role, stripe_connect_account_id, full_name')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
-    if (profileError || !profile) {
-      throw new Error('Profile not found');
+    if (profileError) {
+      console.error('Profile query error:', profileError);
+      throw new Error(`Database error: ${profileError.message}`);
+    }
+
+    if (!profile) {
+      throw new Error('Profile not found. Please complete your profile setup first.');
     }
 
     if (profile.role !== 'agent') {
@@ -64,7 +71,7 @@ Deno.serve(async (req: Request) => {
     if (!accountId) {
       const account = await stripe.accounts.create({
         type: 'express',
-        email: profile.email,
+        email: user.email,
         business_type: 'individual',
         capabilities: {
           card_payments: { requested: true },
@@ -87,10 +94,12 @@ Deno.serve(async (req: Request) => {
         .eq('id', user.id);
     }
 
+    const baseUrl = returnUrl ? new URL(returnUrl).origin : `${req.headers.get('origin') || 'http://localhost:5173'}`;
+
     const accountLink = await stripe.accountLinks.create({
       account: accountId,
-      refresh_url: `${Deno.env.get('SUPABASE_URL')}/profile?stripe_refresh=true`,
-      return_url: `${Deno.env.get('SUPABASE_URL')}/profile?stripe_connected=true`,
+      refresh_url: refreshUrl || `${baseUrl}/profile?stripe_refresh=true`,
+      return_url: returnUrl || `${baseUrl}/profile?stripe_connected=true`,
       type: 'account_onboarding',
     });
 

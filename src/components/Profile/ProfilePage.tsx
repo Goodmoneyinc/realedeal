@@ -162,6 +162,8 @@ export function ProfilePage() {
       const { data: session } = await supabase.auth.getSession();
       const token = session.session?.access_token;
 
+      const baseUrl = window.location.origin;
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-connect-onboard`,
         {
@@ -170,6 +172,10 @@ export function ProfilePage() {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
           },
+          body: JSON.stringify({
+            returnUrl: `${baseUrl}/profile?stripe_connected=true`,
+            refreshUrl: `${baseUrl}/profile?stripe_refresh=true`,
+          }),
         }
       );
 
