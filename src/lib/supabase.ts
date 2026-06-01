@@ -1,6 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import type { SupabaseClient } from '@supabase/supabase-js';
-
 type UUID = string;
 type Timestamp = string;
 type DateString = string;
@@ -18,9 +16,17 @@ export type MilestoneStatus = 'not_started' | 'in_progress' | 'completed' | 'blo
 export type ClientTaskStatus = 'pending' | 'completed';
 
 type SupabaseTable<Row, Insert, Update> = {
-  Row: Row;
-  Insert: Insert;
-  Update: Update;
+  Row: Row & Record<string, unknown>;
+  Insert: Insert & Record<string, unknown>;
+  Update: Update & Record<string, unknown>;
+  Relationships: [];
+};
+
+type UntypedValue = any; // eslint-disable-line @typescript-eslint/no-explicit-any
+type UntypedSupabaseTable = {
+  Row: UntypedValue;
+  Insert: UntypedValue;
+  Update: UntypedValue;
   Relationships: [];
 };
 
@@ -65,23 +71,23 @@ export interface Database {
       transaction_pipeline: SupabaseTable<
         {
           id: UUID;
-          deal_id: UUID | null;
+          deal_id: UUID;
           agent_id: UUID | null;
           investor_id: UUID | null;
           lender_id: UUID | null;
           property_address: string;
           transaction_type: string;
           purchase_price: number;
-          current_stage: TransactionStage;
+          current_stage: string;
           stage_order: number;
-          estimated_close_date: DateString | null;
+          estimated_close_date: DateString;
           actual_close_date: DateString | null;
           state: string;
-          brokerage: string | null;
+          brokerage: string;
           status: string;
           created_at: Timestamp;
           updated_at: Timestamp;
-          completed_at: Timestamp | null;
+          completed_at: Timestamp;
         },
         {
           id?: UUID;
@@ -92,7 +98,7 @@ export interface Database {
           property_address: string;
           transaction_type?: string;
           purchase_price?: number;
-          current_stage?: TransactionStage;
+          current_stage?: string;
           stage_order?: number;
           estimated_close_date?: DateString | null;
           actual_close_date?: DateString | null;
@@ -112,7 +118,7 @@ export interface Database {
           property_address?: string;
           transaction_type?: string;
           purchase_price?: number;
-          current_stage?: TransactionStage;
+          current_stage?: string;
           stage_order?: number;
           estimated_close_date?: DateString | null;
           actual_close_date?: DateString | null;
@@ -129,12 +135,12 @@ export interface Database {
           id: UUID;
           pipeline_id: UUID;
           name: string;
-          description: string | null;
+          description: string;
           status: MilestoneStatus;
           progress_percentage: number;
           order_index: number;
-          due_date: Timestamp | null;
-          completed_at: Timestamp | null;
+          due_date: Timestamp;
+          completed_at: Timestamp;
           created_at: Timestamp;
           updated_at: Timestamp;
         },
@@ -170,11 +176,11 @@ export interface Database {
           id: UUID;
           pipeline_id: UUID;
           title: string;
-          description: string | null;
+          description: string;
           priority: TaskPriority;
           status: ClientTaskStatus;
-          due_date: Timestamp | null;
-          completed_at: Timestamp | null;
+          due_date: Timestamp;
+          completed_at: Timestamp;
           created_by: UUID;
           created_at: Timestamp;
         },
@@ -203,16 +209,37 @@ export interface Database {
           created_at?: Timestamp;
         }
       >;
+
+      deals: UntypedSupabaseTable;
+      user_profiles: UntypedSupabaseTable;
+      vendors: UntypedSupabaseTable;
+      vendor_tasks: UntypedSupabaseTable;
+      documents: UntypedSupabaseTable;
+      document_activity: UntypedSupabaseTable;
+      document_annotations: UntypedSupabaseTable;
+      document_shares: UntypedSupabaseTable;
+      email_templates: UntypedSupabaseTable;
+      scheduled_emails: UntypedSupabaseTable;
+      property_images: UntypedSupabaseTable;
+      deal_contracts: UntypedSupabaseTable;
+      agent_investor_assignments: UntypedSupabaseTable;
+      deal_actions: UntypedSupabaseTable;
+      lender_referrals: UntypedSupabaseTable;
+      financing_proposals: UntypedSupabaseTable;
+      term_sheets: UntypedSupabaseTable;
+      compliance_checklists: UntypedSupabaseTable;
+      pipeline_checklist_items: UntypedSupabaseTable;
+      pipeline_notes: UntypedSupabaseTable;
     };
-    Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Views: Record<never, never>;
+    Functions: Record<never, never>;
     Enums: {
       transaction_stage: TransactionStage;
       task_priority: TaskPriority;
       milestone_status: MilestoneStatus;
       client_task_status: ClientTaskStatus;
     };
-    CompositeTypes: Record<string, never>;
+    CompositeTypes: Record<never, never>;
   };
 }
 
@@ -238,7 +265,7 @@ if (!envSupabaseUrl || !envSupabaseAnonKey) {
 const supabaseUrl = envSupabaseUrl || SUPABASE_URL_PLACEHOLDER;
 const supabaseAnonKey = envSupabaseAnonKey || SUPABASE_ANON_KEY_PLACEHOLDER;
 
-export const supabase: SupabaseClient<Database> = createClient<Database>(
+export const supabase = createClient<Database>(
   supabaseUrl,
   supabaseAnonKey,
 );
