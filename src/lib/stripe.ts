@@ -1,10 +1,13 @@
-import { supabase } from './supabase';
-
 interface StripeCheckoutParams {
   priceId: string;
   mode: 'payment' | 'subscription';
   successUrl: string;
   cancelUrl: string;
+}
+
+interface CheckoutSessionResponse {
+  url?: string;
+  error?: string;
 }
 
 export async function createStripeCheckout({
@@ -13,38 +16,46 @@ export async function createStripeCheckout({
   successUrl,
   cancelUrl,
 }: StripeCheckoutParams): Promise<{ url: string | null; error: string | null }> {
+  const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+
+  if (!publishableKey) {
+    return { url: null, error: 'Stripe publishable key is not configured' };
+  }
+
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session) {
-      return { url: null, error: 'Not authenticated' };
-    }
-
-    const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stripe-checkout`;
-
-    const response = await fetch(apiUrl, {
+    const response = await fetch('/api/create-checkout-session', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${session.access_token}`,
         'Content-Type': 'application/json',
+        'X-Stripe-Publishable-Key': publishableKey,
       },
       body: JSON.stringify({
-        price_id: priceId,
+        priceId,
         mode,
-        success_url: successUrl,
-        cancel_url: cancelUrl,
+        successUrl,
+        cancelUrl,
       }),
     });
 
-    const data = await response.json();
+    const data = (await response.json().catch(() => ({}))) as CheckoutSessionResponse;
 
     if (!response.ok) {
-      return { url: null, error: data.error || 'Failed to create checkout session' };
+      return {
+        url: null,
+        error: data.error || `Failed to create checkout session (${response.status})`,
+      };
+    }
+
+    if (!data.url) {
+      return { url: null, error: 'Checkout session response did not include a URL' };
     }
 
     return { url: data.url, error: null };
-  } catch (error: any) {
+  } catch (error) {
     console.error('Stripe checkout error:', error);
-    return { url: null, error: error.message || 'An unexpected error occurred' };
+    return {
+      url: null,
+      error: error instanceof Error ? error.message : 'An unexpected error occurred',
+    };
   }
 }

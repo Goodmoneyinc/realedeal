@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Building2, Mail, Lock, User, AlertCircle, CheckCircle, Briefcase, TrendingUp, DollarSign, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { createStripeCheckout } from '../../lib/stripe';
@@ -33,48 +33,55 @@ export function Signup({ onToggleView, onBack }: SignupProps) {
       return;
     }
 
-    const { error } = await signUp(email, password, fullName, role);
+    const { error: signUpError } = await signUp(email, password, fullName, role);
 
-    if (error) {
-      setError(error.message);
+    if (signUpError) {
+      setError(signUpError.message);
       setLoading(false);
-    } else {
-      const hasCheckoutPending = localStorage.getItem('stripe_checkout_pending') === 'true';
-
-      if (hasCheckoutPending) {
-        localStorage.removeItem('stripe_checkout_pending');
-        setRedirectingToCheckout(true);
-
-        const signInResult = await signIn(email, password);
-        if (signInResult.error) {
-          setError('Account created but sign in failed. Please sign in manually.');
-          setLoading(false);
-          setRedirectingToCheckout(false);
-          return;
-        }
-
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        const priceId = import.meta.env.VITE_STRIPE_PRICE_ID || 'CONFIGURE_STRIPE_PRICE_ID';
-        const { url, error: checkoutError } = await createStripeCheckout({
-          priceId,
-          mode: 'subscription',
-          successUrl: `${window.location.origin}?checkout=success`,
-          cancelUrl: `${window.location.origin}?checkout=cancelled`,
-        });
-
-        if (checkoutError || !url) {
-          setError(checkoutError || 'Failed to create checkout session');
-          setLoading(false);
-          setRedirectingToCheckout(false);
-        } else {
-          window.location.href = url;
-        }
-      } else {
-        setSuccess(true);
-        setLoading(false);
-      }
+      return;
     }
+
+    const hasCheckoutPending = localStorage.getItem('stripe_checkout_pending') !== null;
+
+    if (!hasCheckoutPending) {
+      setSuccess(true);
+      setLoading(false);
+      return;
+    }
+
+    const priceId = import.meta.env.VITE_STRIPE_PRICE_ID;
+    if (!priceId) {
+      setError('Stripe checkout is not configured. Please contact support.');
+      setLoading(false);
+      return;
+    }
+
+    setRedirectingToCheckout(true);
+
+    const signInResult = await signIn(email, password);
+    if (signInResult.error) {
+      setError('Account created but sign in failed. Please sign in manually.');
+      setLoading(false);
+      setRedirectingToCheckout(false);
+      return;
+    }
+
+    const { url, error: checkoutError } = await createStripeCheckout({
+      priceId,
+      mode: 'subscription',
+      successUrl: `${window.location.origin}?checkout=success`,
+      cancelUrl: `${window.location.origin}?checkout=cancelled`,
+    });
+
+    if (checkoutError || !url) {
+      setError(checkoutError || 'Failed to create checkout session');
+      setLoading(false);
+      setRedirectingToCheckout(false);
+      return;
+    }
+
+    localStorage.removeItem('stripe_checkout_pending');
+    window.location.href = url;
   };
 
   if (redirectingToCheckout) {
